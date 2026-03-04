@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAvatarStore, type AvatarType } from "@/features/avatar/useAvatarStore";
@@ -11,11 +11,11 @@ const avatars = [
     { type: "NEUTRAL" as AvatarType, emoji: "🧒", label: "Adventurer", color: "#FAEDCD" },
 ];
 
-const container = {
+const container: Variants = {
     hidden: {},
     show: { transition: { staggerChildren: 0.12 } },
 };
-const item = {
+const item: Variants = {
     hidden: { opacity: 0, y: 30 },
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 18 } },
 };
@@ -55,8 +55,8 @@ export default function AvatarSetupPage() {
                     <motion.button
                         key={av.type}
                         className={`glass rounded-2xl p-5 flex items-center gap-5 text-left transition-all duration-200 border-2 ${selected === av.type
-                                ? "border-[var(--primary)] scale-[1.02] shadow-xl"
-                                : "border-transparent"
+                            ? "border-[var(--primary)] scale-[1.02] shadow-xl"
+                            : "border-transparent"
                             }`}
                         variants={item}
                         whileTap={{ scale: 0.96 }}
