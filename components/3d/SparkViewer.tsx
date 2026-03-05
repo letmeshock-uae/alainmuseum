@@ -87,8 +87,10 @@ export default function SparkViewer({
                 scene.add(splatMesh);
 
                 // Initial position
-                const initialCameraY = 4.156316503962698;
-                camera.position.set(0.00010143054113285909, initialCameraY, -0.07325761080600836);
+                // NOTE: This scene uses Z as its vertical axis (up/down).
+                // The museum floor is the XY plane. We lock camera.position.z.
+                const initialCameraZ = -0.07325761080600836;
+                camera.position.set(0.00010143054113285909, 4.156316503962698, initialCameraZ);
                 camera.lookAt(0, 0, 0);
 
                 // ── Custom FPS & Touch Controls ──────────────────────────────
@@ -96,10 +98,10 @@ export default function SparkViewer({
                 let yawDelta = 0;
                 let pitchDelta = 0;
 
-                // Cache initial horizontal forward direction (Y=0 guaranteed).
-                // Used by pinch to move strictly on the XZ plane.
+                // Cache initial horizontal forward direction (Z=0 guaranteed — floor is XY plane).
+                // Rotating a Z=0 vector around the Z axis keeps Z=0.
                 const _initFwd = new THREE.Vector3(0, 0, -1).applyQuaternion(initialQuaternion);
-                _initFwd.y = 0;
+                _initFwd.z = 0;
                 if (_initFwd.length() > 0.001) _initFwd.normalize();
                 const initialHorizontalForward = _initFwd;
 
@@ -197,18 +199,17 @@ export default function SparkViewer({
                         const dist = Math.hypot(dx, dy);
                         const deltaDist = dist - initialPinchDist;
 
-                        // Derive horizontal forward FROM YAW ONLY (no pitch).
-                        // Rotating a Y=0 vector by an axis-angle around Y keeps Y=0.
-                        // This is mathematically guaranteed to produce zero vertical movement.
+                        // Derive horizontal forward from yaw only — around Z axis (scene up).
+                        // Rotating a Z=0 vector around Z axis keeps Z=0 guaranteed.
                         const qYawOnly = new THREE.Quaternion().setFromAxisAngle(
-                            new THREE.Vector3(0, 1, 0), yawDelta
+                            new THREE.Vector3(0, 0, 1), yawDelta
                         );
                         const pinchDir = initialHorizontalForward.clone().applyQuaternion(qYawOnly);
-                        // pinchDir.y is guaranteed 0; no need to zero it.
+                        // pinchDir.z is guaranteed 0 — no vertical movement possible.
 
                         camera.position.addScaledVector(pinchDir, deltaDist * 0.08);
-                        // Belt-and-suspenders Y lock
-                        camera.position.y = initialCameraY;
+                        // Lock Z (scene vertical axis)
+                        camera.position.z = initialCameraZ;
                         initialPinchDist = dist;
                     }
                 };
@@ -239,23 +240,23 @@ export default function SparkViewer({
                     const delta = Math.min(clock.getDelta(), 0.1);
                     const currentSpeed = moveSpeed * delta;
 
-                    // Get horizontal forward direction
+                    // Get horizontal forward direction (floor = XY plane, Z is up)
                     const forwardDir = new THREE.Vector3();
                     camera.getWorldDirection(forwardDir);
-                    forwardDir.y = 0;
-                    forwardDir.normalize();
+                    forwardDir.z = 0; // zero the vertical (Z) component
+                    if (forwardDir.length() > 0.001) forwardDir.normalize();
 
-                    // Get horizontal right direction
+                    // Get horizontal right direction (cross: up(Z) × forward = right)
                     const rightDir = new THREE.Vector3();
-                    rightDir.crossVectors(forwardDir, new THREE.Vector3(0, 1, 0)).normalize();
+                    rightDir.crossVectors(new THREE.Vector3(0, 0, 1), forwardDir).normalize();
 
                     if (moveState.forward) camera.position.addScaledVector(forwardDir, currentSpeed);
                     if (moveState.backward) camera.position.addScaledVector(forwardDir, -currentSpeed);
                     if (moveState.right) camera.position.addScaledVector(rightDir, currentSpeed);
                     if (moveState.left) camera.position.addScaledVector(rightDir, -currentSpeed);
 
-                    // Safety fail-safe just to enforce floor level strictly
-                    camera.position.y = initialCameraY;
+                    // Lock Z (scene vertical axis) — enforce floor level
+                    camera.position.z = initialCameraZ;
 
                     renderer.render(scene, camera);
 
