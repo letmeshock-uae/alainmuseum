@@ -87,8 +87,9 @@ export default function SparkViewer({
                 scene.add(splatMesh);
 
                 // Initial position
-                camera.position.set(0.00010143054113285909, 4.156316503962698, -0.07325761080600836);
-                camera.lookAt(0, 0, 0);
+                const startY = 4.156316503962698;
+                camera.position.set(0.00010143054113285909, startY, -0.07325761080600836);
+                camera.lookAt(0, startY, 0);
 
                 // ── Custom FPS & Touch Controls ──────────────────────────────
                 const initialQuaternion = camera.quaternion.clone();
@@ -189,6 +190,7 @@ export default function SparkViewer({
                         const dist = Math.hypot(dx, dy);
                         const deltaDist = dist - initialPinchDist;
                         camera.translateZ(-deltaDist * 0.08); // Adjust zoom speed
+                        camera.position.y = startY; // lock elevation
                         initialPinchDist = dist;
                     }
                 };
@@ -223,6 +225,8 @@ export default function SparkViewer({
                     if (moveState.backward) camera.translateZ(currentSpeed);
                     if (moveState.left) camera.translateX(-currentSpeed);
                     if (moveState.right) camera.translateX(currentSpeed);
+
+                    camera.position.y = startY; // lock elevation
 
                     renderer.render(scene, camera);
 
