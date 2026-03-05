@@ -276,6 +276,7 @@ export default function SparkViewer({
                 animate();
 
                 // ── Progress polling ─────────────────────────────
+                let fakeProgress = 5;
                 const poll = setInterval(() => {
                     try {
                         let p = 0;
@@ -284,15 +285,20 @@ export default function SparkViewer({
                         else if (typeof splatMesh.loadProgress === "number") p = splatMesh.loadProgress;
                         else if (splatMesh.numSplats > 0) p = 1;
 
-                        setProgress(Math.max(5, Math.round(p * 100)));
-
                         if (p >= 1) {
+                            setProgress(100);
                             clearInterval(poll);
                             setLoaded(true);
                             onLoad?.();
+                        } else {
+                            // Asymptotically approach 95% if there's no real progress value
+                            fakeProgress += (95 - fakeProgress) * 0.1;
+                            // If p is reporting realistically (>0), use it, otherwise use fake smooth progress
+                            const activeProgress = p > 0 ? p * 100 : fakeProgress;
+                            setProgress(Math.max(5, Math.round(activeProgress)));
                         }
                     } catch { /* silent */ }
-                }, 300);
+                }, 100);
                 disposals.push(() => clearInterval(poll));
 
                 // ── Resize ───────────────────────────────────────
