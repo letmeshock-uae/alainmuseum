@@ -85,9 +85,9 @@ export default function SparkViewer({
                 camera.lookAt(0, 0, 0);
 
                 // ── Custom FPS & Touch Controls ──────────────────────────────
-                camera.rotation.order = 'YXZ';
-                let yaw = camera.rotation.y;
-                let pitch = camera.rotation.x;
+                const initialQuaternion = camera.quaternion.clone();
+                let yawDelta = 0;
+                let pitchDelta = 0;
 
                 const moveState = { forward: false, backward: false, left: false, right: false };
                 const moveSpeed = 1.5;
@@ -132,8 +132,16 @@ export default function SparkViewer({
                 const onMouseMove = (e: MouseEvent) => {
                     if (!isDragging || !previousTouch) return;
                     const dx = e.clientX - previousTouch.x;
-                    yaw -= dx * touchSensitivity;
-                    camera.rotation.set(pitch, yaw, 0);
+                    const dy = e.clientY - previousTouch.y;
+
+                    yawDelta -= dx * touchSensitivity;
+                    pitchDelta -= dy * touchSensitivity;
+                    pitchDelta = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, pitchDelta));
+
+                    const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yawDelta);
+                    const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitchDelta);
+                    camera.quaternion.copy(initialQuaternion).multiply(qYaw).multiply(qPitch);
+
                     previousTouch = { x: e.clientX, y: e.clientY };
                 };
                 window.addEventListener('mousemove', onMouseMove);
@@ -158,8 +166,16 @@ export default function SparkViewer({
                     e.preventDefault(); // Prevents page scrolling when interacting with canvas
                     if (e.touches.length === 1 && previousTouch) {
                         const dx = e.touches[0].clientX - previousTouch.x;
-                        yaw -= dx * touchSensitivity;
-                        camera.rotation.set(pitch, yaw, 0);
+                        const dy = e.touches[0].clientY - previousTouch.y;
+
+                        yawDelta -= dx * touchSensitivity;
+                        pitchDelta -= dy * touchSensitivity;
+                        pitchDelta = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, pitchDelta));
+
+                        const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yawDelta);
+                        const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitchDelta);
+                        camera.quaternion.copy(initialQuaternion).multiply(qYaw).multiply(qPitch);
+
                         previousTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
                     } else if (e.touches.length === 2 && initialPinchDist !== null) {
                         const dx = e.touches[0].clientX - e.touches[1].clientX;
