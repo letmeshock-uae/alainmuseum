@@ -142,7 +142,7 @@ export default function HallPage() {
                                 <p className="text-sm font-bold text-[var(--text-main)]">Drag to explore 360°</p>
                             </div>
                             <motion.button
-                                className="btn-primary text-sm px-4 py-2"
+                                className="btn-primary text-sm px-4 py-2 !rounded-2xl"
                                 whileTap={{ scale: 0.93 }}
                                 onClick={() => fileInputRef.current?.click()}
                             >
