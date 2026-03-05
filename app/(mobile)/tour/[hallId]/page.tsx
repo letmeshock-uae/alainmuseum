@@ -18,10 +18,10 @@ const SparkViewer = dynamic(() => import("@/components/3d/SparkViewer"), {
 });
 
 const ARTIFACTS = [
-    { id: "falcon-statue", label: "Falcon Statue", emoji: "🦅", position: [2, 4.1, -2] as [number, number, number] },
-    { id: "ancient-pottery", label: "Ancient Pottery", emoji: "🏺", position: [3, 4.15, 2] as [number, number, number] },
-    { id: "brass-astrolabe", label: "Brass Astrolabe", emoji: "⚙️", position: [-2, 4.0, 3] as [number, number, number] },
-    { id: "palm-leaf-script", label: "Palm Leaf Script", emoji: "📜", position: [-3, 4.05, -2] as [number, number, number] },
+    { id: "falcon-statue", label: "Falcon Statue", emoji: "🦅", position: [0, 4.0, -3] as [number, number, number] }, // Front
+    { id: "ancient-pottery", label: "Ancient Pottery", emoji: "🏺", position: [3, 4.0, 0] as [number, number, number] }, // Right
+    { id: "brass-astrolabe", label: "Brass Astrolabe", emoji: "⚙️", position: [0, 4.0, 3] as [number, number, number] }, // Back
+    { id: "palm-leaf-script", label: "Palm Leaf Script", emoji: "📜", position: [-3, 4.0, 0] as [number, number, number] }, // Left
 ];
 
 export default function HallPage() {
