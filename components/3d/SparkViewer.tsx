@@ -96,6 +96,13 @@ export default function SparkViewer({
                 let yawDelta = 0;
                 let pitchDelta = 0;
 
+                // Cache initial horizontal forward direction (Y=0 guaranteed).
+                // Used by pinch to move strictly on the XZ plane.
+                const _initFwd = new THREE.Vector3(0, 0, -1).applyQuaternion(initialQuaternion);
+                _initFwd.y = 0;
+                if (_initFwd.length() > 0.001) _initFwd.normalize();
+                const initialHorizontalForward = _initFwd;
+
                 const moveState = { forward: false, backward: false, left: false, right: false };
                 const moveSpeed = 1.5;
                 const touchSensitivity = 0.005;
@@ -190,15 +197,17 @@ export default function SparkViewer({
                         const dist = Math.hypot(dx, dy);
                         const deltaDist = dist - initialPinchDist;
 
-                        // Get camera's horizontal forward direction (X/Z plane only — NO Y movement)
-                        const dir = new THREE.Vector3();
-                        camera.getWorldDirection(dir);
-                        dir.y = 0; // flatten to ground plane
-                        const len = dir.length();
-                        if (len > 0.001) dir.divideScalar(len); // safe normalize
+                        // Derive horizontal forward FROM YAW ONLY (no pitch).
+                        // Rotating a Y=0 vector by an axis-angle around Y keeps Y=0.
+                        // This is mathematically guaranteed to produce zero vertical movement.
+                        const qYawOnly = new THREE.Quaternion().setFromAxisAngle(
+                            new THREE.Vector3(0, 1, 0), yawDelta
+                        );
+                        const pinchDir = initialHorizontalForward.clone().applyQuaternion(qYawOnly);
+                        // pinchDir.y is guaranteed 0; no need to zero it.
 
-                        camera.position.addScaledVector(dir, deltaDist * 0.08);
-                        // Immediately enforce Y lock — don't wait for next animate() frame
+                        camera.position.addScaledVector(pinchDir, deltaDist * 0.08);
+                        // Belt-and-suspenders Y lock
                         camera.position.y = initialCameraY;
                         initialPinchDist = dist;
                     }
