@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 interface SparkViewerProps {
     url?: string;
     className?: string;
+    onLoad?: () => void;
 }
 
 // Use Function constructor to prevent webpack from statically analyzing
@@ -17,6 +18,7 @@ async function dynamicImport(specifier: string): Promise<any> {
 export default function SparkViewer({
     url = "/models/AlAinMuseum_test_Hall7.sog",
     className = "",
+    onLoad,
 }: SparkViewerProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [progress, setProgress] = useState(5);
@@ -230,6 +232,7 @@ export default function SparkViewer({
                         if (p >= 1) {
                             clearInterval(poll);
                             setLoaded(true);
+                            onLoad?.();
                         }
                     } catch { /* silent */ }
                 }, 300);

@@ -55,12 +55,19 @@ body {
 /* Desktop mobile-container wrapper */
 #mobile-wrapper {
   position: relative;
-  max-width: 430px;
+  width: 100%;
+  max-width: 100%;
   min-height: 100svh;
   margin: 0 auto;
   overflow: hidden;
   background: var(--background);
   box-shadow: 0 0 80px rgba(0, 0, 0, 0.25);
+}
+
+@media (min-width: 768px) {
+  #mobile-wrapper {
+    max-width: 430px;
+  }
 }
 
 /* Desktop blurred bg */

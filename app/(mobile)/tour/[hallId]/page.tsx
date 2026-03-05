@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAvatarStore } from "@/features/avatar/useAvatarStore";
 
 // Dynamic import prevents spark.js from running server-side
@@ -28,48 +28,72 @@ export default function HallPage() {
     const avatar = useAvatarStore((s) => s.type);
     const router = useRouter();
     const [showHotspots, setShowHotspots] = useState(true);
+    const [isLoaded, setIsLoaded] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const avatarEmoji = avatar === "BOY" ? "👦" : avatar === "GIRL" ? "👧" : "🧒";
 
     return (
         <main className="relative flex flex-col h-svh overflow-hidden bg-black">
+            {/* ── Hidden File Input for Native AR/Camera ── */}
+            <input
+                type="file"
+                accept="image/*,video/*"
+                capture="environment"
+                ref={fileInputRef}
+                className="hidden"
+            />
+
             {/* ── 3DGS Viewer (full screen) ───────────────────── */}
             <div className="absolute inset-0">
-                <SparkViewer url="/models/AlAinMuseum_test_Hall7.sog" className="w-full h-full" />
+                <SparkViewer
+                    url="/models/AlAinMuseum_test_Hall7.sog"
+                    className="w-full h-full"
+                    onLoad={() => setIsLoaded(true)}
+                />
             </div>
 
             {/* ── Top bar ──────────────────────────────────────── */}
-            <div className="relative z-20 flex items-center justify-between px-4 pt-4">
-                <Link href="/avatar-setup">
-                    <motion.button
-                        className="glass-dark rounded-full px-4 py-2 text-white text-sm font-bold flex items-center gap-2"
-                        whileTap={{ scale: 0.93 }}
+            <AnimatePresence>
+                {isLoaded && (
+                    <motion.div
+                        className="relative z-20 flex items-center justify-between px-4 pt-4"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
                     >
-                        ← Back
-                    </motion.button>
-                </Link>
+                        <Link href="/avatar-setup">
+                            <motion.button
+                                className="glass-dark rounded-full px-4 py-2 text-white text-sm font-bold flex items-center gap-2"
+                                whileTap={{ scale: 0.93 }}
+                            >
+                                ← Back
+                            </motion.button>
+                        </Link>
 
-                <motion.div
-                    className="glass rounded-2xl px-4 py-2 flex items-center gap-2"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                >
-                    <span className="text-xl">{avatarEmoji}</span>
-                    <span className="text-sm font-bold text-[var(--text-main)]">Hall 7</span>
-                </motion.div>
+                        <motion.div
+                            className="glass rounded-2xl px-4 py-2 flex items-center gap-2"
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                        >
+                            <span className="text-xl">{avatarEmoji}</span>
+                            <span className="text-sm font-bold text-[var(--text-main)]">Hall 7</span>
+                        </motion.div>
 
-                <motion.button
-                    className="glass-dark rounded-full px-3 py-2 text-white text-sm font-bold"
-                    whileTap={{ scale: 0.93 }}
-                    onClick={() => setShowHotspots((v) => !v)}
-                >
-                    {showHotspots ? "👁 Hide" : "👁 Show"}
-                </motion.button>
-            </div>
+                        <motion.button
+                            className="glass-dark rounded-full px-3 py-2 text-white text-sm font-bold"
+                            whileTap={{ scale: 0.93 }}
+                            onClick={() => setShowHotspots((v) => !v)}
+                        >
+                            {showHotspots ? "👁 Hide" : "👁 Show"}
+                        </motion.button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* ── Artifact Hotspots ────────────────────────────── */}
             <AnimatePresence>
-                {showHotspots &&
+                {isLoaded && showHotspots &&
                     ARTIFACTS.map((art, i) => (
                         <motion.button
                             key={art.id}
@@ -91,26 +115,31 @@ export default function HallPage() {
             </AnimatePresence>
 
             {/* ── Bottom action bar ────────────────────────────── */}
-            <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-6">
-                <motion.div
-                    className="glass rounded-3xl px-5 py-4 flex items-center justify-between"
-                    initial={{ y: 100, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-                >
-                    <div>
-                        <p className="text-xs text-[var(--text-soft)] font-semibold">Hall 7 — Al Ain</p>
-                        <p className="text-sm font-bold text-[var(--text-main)]">Drag to explore 360°</p>
+            <AnimatePresence>
+                {isLoaded && (
+                    <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-6">
+                        <motion.div
+                            className="glass rounded-3xl px-5 py-4 flex items-center justify-between"
+                            initial={{ y: 100, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 100, opacity: 0 }}
+                            transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                        >
+                            <div>
+                                <p className="text-xs text-[var(--text-soft)] font-semibold">Hall 7 — Al Ain</p>
+                                <p className="text-sm font-bold text-[var(--text-main)]">Drag to explore 360°</p>
+                            </div>
+                            <motion.button
+                                className="btn-primary text-sm px-4 py-2"
+                                whileTap={{ scale: 0.93 }}
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                📷 Open AR
+                            </motion.button>
+                        </motion.div>
                     </div>
-                    <motion.button
-                        className="btn-primary text-sm px-4 py-2"
-                        whileTap={{ scale: 0.93 }}
-                        onClick={() => router.push("/tour/hall-7/ar")}
-                    >
-                        📷 Open AR
-                    </motion.button>
-                </motion.div>
-            </div>
+                )}
+            </AnimatePresence>
         </main>
     );
 }
