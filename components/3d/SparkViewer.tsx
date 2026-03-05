@@ -80,29 +80,122 @@ export default function SparkViewer({
                 const splatMesh = new SplatMesh({ url });
                 scene.add(splatMesh);
 
-                // ── FlyControls ──────────────────────────────
-                const { FlyControls } = await dynamicImport("three/addons/controls/FlyControls.js");
-                const controls = new FlyControls(camera, renderer.domElement);
-                controls.movementSpeed = 1.0; // Adjust for reasonable walking speed
-                controls.rollSpeed = Math.PI / 12;
-                controls.autoForward = false;
-                controls.dragToLook = true; // Allows looking around by dragging
-
                 // Initial position
                 camera.position.set(0.00010143054113285909, 4.156316503962698, -0.07325761080600836);
-
-                // Keep the target by setting the initial rotation to look at it
                 camera.lookAt(0, 0, 0);
 
+                // ── Custom FPS & Touch Controls ──────────────────────────────
+                camera.rotation.order = 'YXZ';
+                let yaw = camera.rotation.y;
+                let pitch = camera.rotation.x;
+
+                const moveState = { forward: false, backward: false, left: false, right: false };
+                const moveSpeed = 1.5;
+                const touchSensitivity = 0.005;
+
+                const onKeyDown = (e: KeyboardEvent) => {
+                    switch (e.code) {
+                        case 'KeyW': case 'ArrowUp': moveState.forward = true; break;
+                        case 'KeyS': case 'ArrowDown': moveState.backward = true; break;
+                        case 'KeyA': case 'ArrowLeft': moveState.left = true; break;
+                        case 'KeyD': case 'ArrowRight': moveState.right = true; break;
+                    }
+                };
+                const onKeyUp = (e: KeyboardEvent) => {
+                    switch (e.code) {
+                        case 'KeyW': case 'ArrowUp': moveState.forward = false; break;
+                        case 'KeyS': case 'ArrowDown': moveState.backward = false; break;
+                        case 'KeyA': case 'ArrowLeft': moveState.left = false; break;
+                        case 'KeyD': case 'ArrowRight': moveState.right = false; break;
+                    }
+                };
+                window.addEventListener('keydown', onKeyDown);
+                window.addEventListener('keyup', onKeyUp);
+                disposals.push(() => {
+                    window.removeEventListener('keydown', onKeyDown);
+                    window.removeEventListener('keyup', onKeyUp);
+                });
+
+                let isDragging = false;
+                let previousTouch: { x: number, y: number } | null = null;
+                let initialPinchDist: number | null = null;
+
+                const domElem = renderer.domElement;
+
+                // Mouse Drag to Look
+                domElem.addEventListener('mousedown', (e: MouseEvent) => {
+                    isDragging = true;
+                    previousTouch = { x: e.clientX, y: e.clientY };
+                });
+                const onMouseUp = () => { isDragging = false; previousTouch = null; };
+                window.addEventListener('mouseup', onMouseUp);
+                const onMouseMove = (e: MouseEvent) => {
+                    if (!isDragging || !previousTouch) return;
+                    const dx = e.clientX - previousTouch.x;
+                    yaw -= dx * touchSensitivity;
+                    camera.rotation.set(pitch, yaw, 0);
+                    previousTouch = { x: e.clientX, y: e.clientY };
+                };
+                window.addEventListener('mousemove', onMouseMove);
+                disposals.push(() => {
+                    window.removeEventListener('mouseup', onMouseUp);
+                    window.removeEventListener('mousemove', onMouseMove);
+                });
+
+                // Touch: 1 finger to look, 2 fingers to move forward/backward (pinch)
+                const onTouchStart = (e: TouchEvent) => {
+                    if (e.touches.length === 1) {
+                        previousTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                    } else if (e.touches.length === 2) {
+                        const dx = e.touches[0].clientX - e.touches[1].clientX;
+                        const dy = e.touches[0].clientY - e.touches[1].clientY;
+                        initialPinchDist = Math.hypot(dx, dy);
+                    }
+                };
+                domElem.addEventListener('touchstart', onTouchStart, { passive: false });
+
+                const onTouchMove = (e: TouchEvent) => {
+                    e.preventDefault(); // Prevents page scrolling when interacting with canvas
+                    if (e.touches.length === 1 && previousTouch) {
+                        const dx = e.touches[0].clientX - previousTouch.x;
+                        yaw -= dx * touchSensitivity;
+                        camera.rotation.set(pitch, yaw, 0);
+                        previousTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                    } else if (e.touches.length === 2 && initialPinchDist !== null) {
+                        const dx = e.touches[0].clientX - e.touches[1].clientX;
+                        const dy = e.touches[0].clientY - e.touches[1].clientY;
+                        const dist = Math.hypot(dx, dy);
+                        const deltaDist = dist - initialPinchDist;
+                        camera.translateZ(-deltaDist * 0.08); // Adjust zoom speed
+                        initialPinchDist = dist;
+                    }
+                };
+                domElem.addEventListener('touchmove', onTouchMove, { passive: false });
+
+                const onTouchEnd = (e: TouchEvent) => {
+                    if (e.touches.length < 2) initialPinchDist = null;
+                    if (e.touches.length === 0) previousTouch = null;
+                    if (e.touches.length === 1) {
+                        previousTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                    }
+                };
+                domElem.addEventListener('touchend', onTouchEnd);
+                domElem.addEventListener('touchcancel', onTouchEnd);
+
                 (window as any).debugCamera = camera;
-                (window as any).debugControls = controls;
 
                 // ── Render loop ──────────────────────────────────
                 const clock = new THREE.Clock();
                 const animate = () => {
                     animId = requestAnimationFrame(animate);
-                    const delta = clock.getDelta();
-                    controls.update(delta);
+                    const delta = Math.min(clock.getDelta(), 0.1);
+                    const currentSpeed = moveSpeed * delta;
+
+                    if (moveState.forward) camera.translateZ(-currentSpeed);
+                    if (moveState.backward) camera.translateZ(currentSpeed);
+                    if (moveState.left) camera.translateX(-currentSpeed);
+                    if (moveState.right) camera.translateX(currentSpeed);
+
                     renderer.render(scene, camera);
                 };
                 animate();
