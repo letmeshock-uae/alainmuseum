@@ -190,13 +190,16 @@ export default function SparkViewer({
                         const dist = Math.hypot(dx, dy);
                         const deltaDist = dist - initialPinchDist;
 
-                        // Extract horizontal forward vector to move along the floor plane
+                        // Get camera's horizontal forward direction (X/Z plane only — NO Y movement)
                         const dir = new THREE.Vector3();
                         camera.getWorldDirection(dir);
-                        dir.y = 0;
-                        dir.normalize();
+                        dir.y = 0; // flatten to ground plane
+                        const len = dir.length();
+                        if (len > 0.001) dir.divideScalar(len); // safe normalize
 
-                        camera.position.addScaledVector(dir, deltaDist * 0.08); // Adjust zoom speed
+                        camera.position.addScaledVector(dir, deltaDist * 0.08);
+                        // Immediately enforce Y lock — don't wait for next animate() frame
+                        camera.position.y = initialCameraY;
                         initialPinchDist = dist;
                     }
                 };
