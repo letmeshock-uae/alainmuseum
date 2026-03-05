@@ -6,6 +6,8 @@ interface SparkViewerProps {
     url?: string;
     className?: string;
     onLoad?: () => void;
+    pois?: { id: string; position: [number, number, number] }[];
+    onPoiUpdate?: (poiCoords: Record<string, { x: number, y: number, z: number }>) => void;
 }
 
 // Use Function constructor to prevent webpack from statically analyzing
@@ -19,6 +21,8 @@ export default function SparkViewer({
     url = "/models/AlAinMuseum_test_Hall7.sog",
     className = "",
     onLoad,
+    pois = [],
+    onPoiUpdate,
 }: SparkViewerProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [progress, setProgress] = useState(5);
@@ -204,6 +208,12 @@ export default function SparkViewer({
 
                 // ── Render loop ──────────────────────────────────
                 const clock = new THREE.Clock();
+                // Map to store POI Vector3 objects so we aren't creating them every frame
+                const poiVectors = pois.map(p => ({
+                    id: p.id,
+                    vec: new THREE.Vector3(...p.position)
+                }));
+
                 const animate = () => {
                     animId = requestAnimationFrame(animate);
                     const delta = Math.min(clock.getDelta(), 0.1);
@@ -215,6 +225,32 @@ export default function SparkViewer({
                     if (moveState.right) camera.translateX(currentSpeed);
 
                     renderer.render(scene, camera);
+
+                    // Project POIs to 2D Screen Space
+                    if (onPoiUpdate && poiVectors.length > 0) {
+                        const newCoords: Record<string, { x: number, y: number, z: number }> = {};
+
+                        const w = container.clientWidth;
+                        const h = container.clientHeight;
+                        const w2 = w / 2;
+                        const h2 = h / 2;
+
+                        for (const p of poiVectors) {
+                            // Clone the world position
+                            const pos = p.vec.clone();
+                            // Project puts the position into normalized device coordinates (-1 to +1)
+                            pos.project(camera);
+
+                            // Map NDC to pixel coordinates relative to the container
+                            newCoords[p.id] = {
+                                x: (pos.x * w2) + w2,
+                                y: -(pos.y * h2) + h2,
+                                z: pos.z // if z > 1, it's behind the camera near plane
+                            };
+                        }
+
+                        onPoiUpdate(newCoords);
+                    }
                 };
                 animate();
 

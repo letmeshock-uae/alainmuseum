@@ -18,10 +18,10 @@ const SparkViewer = dynamic(() => import("@/components/3d/SparkViewer"), {
 });
 
 const ARTIFACTS = [
-    { id: "falcon-statue", label: "Falcon Statue", emoji: "🦅", pos: { top: "30%", left: "20%" } },
-    { id: "ancient-pottery", label: "Ancient Pottery", emoji: "🏺", pos: { top: "55%", left: "65%" } },
-    { id: "brass-astrolabe", label: "Brass Astrolabe", emoji: "⚙️", pos: { top: "20%", left: "70%" } },
-    { id: "palm-leaf-script", label: "Palm Leaf Script", emoji: "📜", pos: { top: "70%", left: "35%" } },
+    { id: "falcon-statue", label: "Falcon Statue", emoji: "🦅", position: [2, 4.1, -2] as [number, number, number] },
+    { id: "ancient-pottery", label: "Ancient Pottery", emoji: "🏺", position: [3, 4.15, 2] as [number, number, number] },
+    { id: "brass-astrolabe", label: "Brass Astrolabe", emoji: "⚙️", position: [-2, 4.0, 3] as [number, number, number] },
+    { id: "palm-leaf-script", label: "Palm Leaf Script", emoji: "📜", position: [-3, 4.05, -2] as [number, number, number] },
 ];
 
 export default function HallPage() {
@@ -29,6 +29,7 @@ export default function HallPage() {
     const router = useRouter();
     const [showHotspots, setShowHotspots] = useState(true);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [poiCoords, setPoiCoords] = useState<Record<string, { x: number, y: number, z: number }>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const avatarEmoji = avatar === "BOY" ? "👦" : avatar === "GIRL" ? "👧" : "🧒";
@@ -50,6 +51,8 @@ export default function HallPage() {
                     url="/models/AlAinMuseum_test_Hall7.sog"
                     className="w-full h-full"
                     onLoad={() => setIsLoaded(true)}
+                    pois={ARTIFACTS}
+                    onPoiUpdate={setPoiCoords}
                 />
             </div>
 
@@ -94,24 +97,33 @@ export default function HallPage() {
             {/* ── Artifact Hotspots ────────────────────────────── */}
             <AnimatePresence>
                 {isLoaded && showHotspots &&
-                    ARTIFACTS.map((art, i) => (
-                        <motion.button
-                            key={art.id}
-                            className="absolute z-20 glass rounded-2xl px-3 py-2 flex items-center gap-2 shadow-lg"
-                            style={art.pos as React.CSSProperties}
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            transition={{ delay: i * 0.1, type: "spring", stiffness: 280 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => router.push(`/tour/hall-7/${art.id}`)}
-                        >
-                            <span className="text-xl pulse-glow rounded-full">{art.emoji}</span>
-                            <span className="text-xs font-bold text-[var(--text-main)] max-w-[80px] leading-tight text-left">
-                                {art.label}
-                            </span>
-                        </motion.button>
-                    ))}
+                    ARTIFACTS.map((art, i) => {
+                        const coords = poiCoords[art.id];
+                        // Only show if we have coordinates and it's physically in front of the camera (z < 1)
+                        if (!coords || coords.z > 1) return null;
+
+                        return (
+                            <motion.button
+                                key={art.id}
+                                className="absolute z-20 glass rounded-2xl px-3 py-2 flex items-center gap-2 shadow-lg w-max"
+                                style={{
+                                    left: `${coords.x}px`,
+                                    top: `${coords.y}px`,
+                                }}
+                                initial={{ opacity: 0, scale: 0.5, x: "-50%", y: "-50%" }}
+                                animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                                exit={{ opacity: 0, scale: 0.5, x: "-50%", y: "-50%" }}
+                                transition={{ type: "spring", stiffness: 280, damping: 20 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => router.push(`/tour/hall-7/${art.id}`)}
+                            >
+                                <span className="text-xl pulse-glow rounded-full shrink-0">{art.emoji}</span>
+                                <span className="text-xs font-bold text-[var(--text-main)] max-w-[90px] leading-tight text-left">
+                                    {art.label}
+                                </span>
+                            </motion.button>
+                        );
+                    })}
             </AnimatePresence>
 
             {/* ── Bottom action bar ────────────────────────────── */}
