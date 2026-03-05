@@ -189,7 +189,14 @@ export default function SparkViewer({
                         const dy = e.touches[0].clientY - e.touches[1].clientY;
                         const dist = Math.hypot(dx, dy);
                         const deltaDist = dist - initialPinchDist;
-                        camera.translateZ(-deltaDist * 0.08); // Adjust zoom speed
+
+                        // Extract horizontal forward vector to move along the floor plane
+                        const dir = new THREE.Vector3();
+                        camera.getWorldDirection(dir);
+                        dir.y = 0;
+                        dir.normalize();
+
+                        camera.position.addScaledVector(dir, deltaDist * 0.08); // Adjust zoom speed
                         initialPinchDist = dist;
                     }
                 };
@@ -220,12 +227,22 @@ export default function SparkViewer({
                     const delta = Math.min(clock.getDelta(), 0.1);
                     const currentSpeed = moveSpeed * delta;
 
-                    if (moveState.forward) camera.translateZ(-currentSpeed);
-                    if (moveState.backward) camera.translateZ(currentSpeed);
-                    if (moveState.left) camera.translateX(-currentSpeed);
-                    if (moveState.right) camera.translateX(currentSpeed);
+                    // Get horizontal forward direction
+                    const forwardDir = new THREE.Vector3();
+                    camera.getWorldDirection(forwardDir);
+                    forwardDir.y = 0;
+                    forwardDir.normalize();
 
-                    // Force the camera strictly to a single horizontal floor plane
+                    // Get horizontal right direction
+                    const rightDir = new THREE.Vector3();
+                    rightDir.crossVectors(forwardDir, new THREE.Vector3(0, 1, 0)).normalize();
+
+                    if (moveState.forward) camera.position.addScaledVector(forwardDir, currentSpeed);
+                    if (moveState.backward) camera.position.addScaledVector(forwardDir, -currentSpeed);
+                    if (moveState.right) camera.position.addScaledVector(rightDir, currentSpeed);
+                    if (moveState.left) camera.position.addScaledVector(rightDir, -currentSpeed);
+
+                    // Safety fail-safe just to enforce floor level strictly
                     camera.position.y = initialCameraY;
 
                     renderer.render(scene, camera);
